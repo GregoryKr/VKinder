@@ -1,0 +1,3 @@
+COMMUNITY_TOKEN = access-token-from-community
+ACCESS_TOKEN = vk1.a.example
+DATABASE_URL = sqlite:///vkinder.db
