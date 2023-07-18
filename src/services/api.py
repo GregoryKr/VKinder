@@ -4,9 +4,9 @@ import vk_api
 from vk_api.longpoll import VkLongPoll
 from vk_api.utils import get_random_id
 
-from src.db import session
-from src.db.models import FoundUser
-from src.settings import ACCESS_TOKEN, COMMUNITY_TOKEN
+from db import session
+from db.models import FoundUser
+from settings import ACCESS_TOKEN, COMMUNITY_TOKEN
 
 REQUIRED_FIELDS = (
     "city",
@@ -35,12 +35,12 @@ class VKinder:
             },
         )
 
-    def get_user(self, user_id: int) -> dict:
+    def get_user(self, user_id: int) -> dict | None:
         data = self.user.method(
             "users.get", {"user_id": user_id, "fields": ",".join(REQUIRED_FIELDS)}
         )
         if not data:
-            raise
+            return
         data = data[0]
 
         year = datetime.strptime(data["bdate"], "%d.%m.%Y").year
@@ -57,11 +57,11 @@ class VKinder:
     def get_city(self, city_name: str) -> int | None:
         results = self.user.method(
             "database.getCities", {"country_id": 1, "need_all": 1, "q": city_name}
-        )["items"]
-        if not results:
-            return None
+        )
+        if not results or "items" not in results:
+            return
 
-        return results[0]["id"]
+        return results["items"][0]["id"]
 
     def __get_new_found_user(self):
         user = self.found_users["users"].pop()
@@ -78,7 +78,7 @@ class VKinder:
         if self.found_users["users"]:
             return self.found_users["users"].pop()
         self.found_users["offset"] += 1
-        users = self.user.method(
+        response = self.user.method(
             "users.search",
             dict(
                 status=status,
@@ -88,7 +88,13 @@ class VKinder:
                 count=self.found_users["count"],
                 **filters
             ),
-        )["items"]
+        )
+
+        try:
+            users = response["items"]
+        except (TypeError, KeyError):
+            users = []
+
         self.found_users["users"].extend(users)
         return self.__get_new_found_user()
 
@@ -97,4 +103,7 @@ class VKinder:
             "photos.get",
             {"user_id": vk_id, "album_id": "profile", "extended": 1, "count": 3},
         )
+
+        if not response or "items" not in response:
+            return []
         return response["items"]

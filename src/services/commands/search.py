@@ -1,8 +1,10 @@
+from typing import cast
+
 from vk_api.longpoll import Event, VkEventType
 
-from src.db import session
-from src.db.models import FoundUser, User
-from src.services import api
+from db import session
+from db.models import FoundUser, User
+from services import api
 
 
 AGE_RANGE = 5
@@ -38,12 +40,12 @@ def ask_for_missing_fields(user: User) -> User:
 
 
 def save_home_town_id(user: User):
-    home_town_id = api.get_city(user.home_town) if user.home_town else None
+    home_town_id = api.get_city(cast(str, user.home_town)) if user.home_town else None
     user.home_town_id = home_town_id
     user.save()
 
 
-def _search_command(user: User) -> FoundUser:
+def _search_command(user: User) -> dict:
     found_user = api.search_users(
         age_from=user.age - AGE_RANGE,
         age_to=user.age + AGE_RANGE,
@@ -60,16 +62,22 @@ def _search_command(user: User) -> FoundUser:
     if photos:
         photos = ",".join(photos)
 
-    return FoundUser(
+    found_user = FoundUser(
         vk_id=found_user["id"],
-        photos=photos,
-        first_name=found_user["first_name"],
-        last_name=found_user["last_name"],
         user_id=user.id,
     ).save()
 
+    return {
+        "photos": photos,
+        "vk_id": found_user["id"],
+        "full_name": f"{found_user['first_name']} {found_user['last_name']}"
+    }
+
 
 def search_command(event: Event) -> None:
+    if not event.user_id:
+        return
+
     user: User = session.query(User).filter(User.vk_id == event.user_id).one()
 
     ask_for_missing_fields(user)
@@ -79,6 +87,6 @@ def search_command(event: Event) -> None:
     found_user = _search_command(user)
     api.send_message(
         event.user_id,
-        (f"Встречайте {found_user.full_name}\n" f"https://vk.com/id{found_user.vk_id}"),
-        attachment=found_user.photos,
+        (f"Встречайте {found_user['full_name']}\n" f"https://vk.com/id{found_user['vk_id']}"),
+        attachment=found_user['photos'],
     )

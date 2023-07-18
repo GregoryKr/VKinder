@@ -1,9 +1,9 @@
 from vk_api.longpoll import Event
 
-from src.db import session
-from src.db.models import User
-from src.services import api
-from src.services.commands.search import search_command
+from db import session
+from db.models import User
+from services import api
+from services.commands.search import search_command
 
 
 def hello_command(event: Event):

@@ -33,9 +33,6 @@ class FoundUser(BaseModel):
 
     id = sq.Column(sq.Integer, primary_key=True)
     vk_id = sq.Column(sq.Integer, unique=True, nullable=False)
-    photos = sq.Column(sq.String)
-    first_name = sq.Column(sq.String)
-    last_name = sq.Column(sq.String)
     user_id = sq.Column(sq.Integer, sq.ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="found_users")
 
@@ -43,7 +40,3 @@ class FoundUser(BaseModel):
         session.add(self)
         session.commit()
         return self
-
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}"

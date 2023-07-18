@@ -1,4 +1,4 @@
-from src.services.api import VKinder
+from services.api import VKinder
 
 
 api = VKinder()
